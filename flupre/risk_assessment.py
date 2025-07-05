@@ -8,6 +8,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+import glob
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MARKER1 = os.path.join(base_dir, 'data', 'markers_dict_four.pickle')
@@ -55,21 +56,32 @@ def replace_prob_binding(row):
         row['Probability'] = 1 - float(row['Probability'])
     return row
 
-def generate_phenotype_stats(input_dir, annotation_dir, host_dir, virulence_dir,binding_dir):
+def generate_phenotype_stats(input_dir, annotation_dir, host_dir, virulence_dir, binding_dir, prefix=None):
     phenotype_dict = defaultdict(dict)
     phenotype_categories = ['transmissibility', 'binding', 'adaptation', 'virulence', 'resistance']
 
 
-    host_df = pd.read_csv(f"{host_dir}/prediction.csv")
-    host_df = host_df.apply(replace_prob_host,axis = 1)
+
+    host_files = glob.glob(f"{host_dir}/*_prediction.csv")
+    if not host_files:
+        raise FileNotFoundError(f"No _prediction.csv files found in host directory: {host_dir}")
+    host_df = pd.read_csv(host_files[0])
+    host_df = host_df.apply(replace_prob_host, axis = 1)
     host_df.drop_duplicates(inplace = True)
 
-    binding_df = pd.read_csv(f"{binding_dir}/prediction.csv")
-    binding_df = binding_df.apply(replace_prob_binding,axis = 1)
+    binding_files = glob.glob(f"{binding_dir}/*_prediction.csv")
+    if not binding_files:
+        raise FileNotFoundError(f"No _prediction.csv files found in binding directory: {binding_dir}")
+    binding_df = pd.read_csv(binding_files[0])
+    binding_df = binding_df.apply(replace_prob_binding, axis = 1)
     binding_df.drop_duplicates(inplace = True)
 
-    vir_df = pd.read_csv(f"{virulence_dir}/prediction.csv")
-    vir_df = vir_df.apply(replace_prob_virulence,axis = 1)
+    vir_files = glob.glob(f"{virulence_dir}/*_prediction.csv")
+    if not vir_files:
+        raise FileNotFoundError(f"No _prediction.csv files found in virulence directory: {virulence_dir}")
+    vir_df = pd.read_csv(vir_files[0])
+    vir_df = vir_df.apply(replace_prob_virulence, axis = 1)
+
     for category in phenotype_categories:
         path = os.path.join(input_dir, category)
 
@@ -109,15 +121,17 @@ def generate_phenotype_stats(input_dir, annotation_dir, host_dir, virulence_dir,
         for _, row in df.iterrows():
             strain_id = row['Strain ID']
             probability = row['Probability']
-            if strain_id in phenotype_dict:
+            strain_id = prefix+'_'+strain_id if prefix else strain_id
+
+            if strain_id in phenotype_dict.keys():
                 phenotype_dict[strain_id][key] = probability
-    phenotype_dict = update_phenotype_dict(phenotype_dict, annotation_dict)
-    # print(phenotype_dict)
+    phenotype_dict = update_phenotype_dict(phenotype_dict, annotation_dict, prefix)
     return phenotype_dict
 
-def update_phenotype_dict(phenotype_dict, annotation_dict):
+def update_phenotype_dict(phenotype_dict, annotation_dict, prefix):
     for strain_id in phenotype_dict:
-        if strain_id not in annotation_dict or annotation_dict[strain_id] == ['Unknown']:
+        strain_id2 = strain_id.split(f'{prefix}_')[1] if prefix else strain_id
+        if strain_id2 not in annotation_dict or annotation_dict[strain_id2] == ['Unknown']:
             phenotype_dict[strain_id]['virulence'] = 0
             phenotype_dict[strain_id]['adaptation'] = 0
 
@@ -187,10 +201,11 @@ def main():
     parser = argparse.ArgumentParser(description = 'Generate risk values CSV for markers data.')
     parser.add_argument('-i', '--input_dir', required = True, help = 'Input directory containing Markers CSV files.')
     parser.add_argument('-a', '--annotation_dir', required = True, default = 'result/', help = 'Input directory containing sequence annotation CSV files.')
-    parser.add_argument('-hp', '--host_dir', default = 'ada_prediction/', help = 'Input directory containing host prediction files.')
-    parser.add_argument('-vp', '--virulence_dir', default = 'vir_prediction/',
+    parser.add_argument('-p', '--prefix', default = None, help = 'If prefix was specified during the marker extraction step, provide that prefix here.')
+    parser.add_argument('-hp', '--host_dir', default = 'host_predictions/', help = 'Input directory containing host prediction files.')
+    parser.add_argument('-vp', '--virulence_dir', default = 'virulence_predictions/',
                         help = 'Input directory containing virulence prediction files.')
-    parser.add_argument('-bp', '--binding_dir', default = 'bin_prediction/',
+    parser.add_argument('-bp', '--binding_dir', default = 'binding_predictions/',
                         help = 'Input directory containing receptor binding perfernece prediction files.')
     parser.add_argument('-o', '--output_dir', required = True, help = 'Output directory where CSV files will be saved.')
     args = parser.parse_args()
@@ -201,19 +216,22 @@ def main():
     host_dir = args.host_dir
     virulence_dir = args.virulence_dir
     binding_dir = args.binding_dir
+    prefix = args.prefix
 
     all_data = []
     with open(MARKER1, 'rb') as handle:
         loaded_markers_four = pickle.load(handle)
     with open(MARKER2, 'rb') as handle:
         loaded_markers_res = pickle.load(handle)
-    phenotype_dict = generate_phenotype_stats(input_dir, annotation_dir, host_dir, virulence_dir, binding_dir)
+    phenotype_dict = generate_phenotype_stats(input_dir, annotation_dir, host_dir, virulence_dir, binding_dir, prefix)
     # print(phenotype_dict)
     for test_name, sample_values in phenotype_dict.items():
         save_risk_values_to_csv(sample_values, loaded_markers_four, loaded_markers_res, output_dir, test_name, all_data,
                                 host_dir, virulence_dir)
     if all_data:
         summary_df = pd.concat(all_data)
+        print('Four phenotypes and six drugs risk score for each input strain:')
+        print(summary_df)
         summary_df.to_csv(os.path.join(output_dir, 'summary_risk_values.csv'), index = False)
 
 
