@@ -258,7 +258,7 @@ risk2tab -i <input> -a <annotation_path> [options]
 risk2tab -i ./ -a annotation_results/ -o radar_file/
 
 # Complete risk assessment with all predictions
-risk2tab -i ./ -a annotation_results/ -hp host_predictions/ -vp virulence_predictions/ -bp binding_predictions/ -o radar_file/
+risk2tab -i ./ -a annotation_results/ -hp host_predictions/ -vp virulence_predictions/ -bp binding_predictions/ -p -o radar_file/
 ```
 
 **Output Files:**
