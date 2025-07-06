@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.6+-blue.svg)](https://python.org/) [![Diamond](https://img.shields.io/badge/Diamond-2.1.11-orange.svg)](https://github.com/bbuchfink/diamond)
 
-`FluRisk` (`flupre`) is a comprehensive risk assessment tool for influenza A viruses. The tool identifies amino acid molecular markers associated with five phenotypic traits and calculates risk scores for early warning and risk assessment. These phenotypes include human adaptation, transmissibility, receptor binding ability, virulence, and drug resistance. Additionally, the tool provides automatic sequence annotation, antigenic relationship assessment between viruses and vaccines, and prediction of host specificity, pathogenicity, and receptor binding preferences.
+`FluRisk` (`flupre`) is a comprehensive risk assessment tool for influenza A viruses. The tool identifies amino acid molecular markers associated with five phenotypic traits and calculates risk scores for early warning and risk assessment. These phenotypes include Mammalian adaptation, transmissibility, huamn receptor binding ability, virulence, and drug resistance. Additionally, the tool provides automatic sequence annotation, antigenic relationship assessment between viruses and vaccines, and prediction of host specificity, pathogenicity, and receptor binding preferences.
 
 ## 📋 Overview
 
@@ -258,7 +258,7 @@ risk2tab -i <input> -a <annotation_path> [options]
 risk2tab -i ./ -a annotation_results/ -o radar_file/
 
 # Complete risk assessment with all predictions
-risk2tab -i ./ -a annotation_results/ -hp host_predictions/ -vp virulence_predictions/ -bp binding_predictions/ -p -o radar_file/
+risk2tab -i ./ -a annotation_results/ -hp host_predictions/ -vp virulence_predictions/ -bp binding_predictions/ -p strain1 -o radar_file/
 ```
 
 **Output Files:**
